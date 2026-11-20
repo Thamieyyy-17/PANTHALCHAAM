@@ -1,0 +1,11 @@
+PANTHALCHAAM IMPLEMENTATION NOTES
+
+- Android display name is explicitly set in Capacitor config and re-applied to Android strings.xml during the build. The workflow verifies this label.
+- The final black-and-gold football logo is copied identically to root icon.png, public/icon.png, assets/icon.png, and resources/icon.png. Capacitor Assets generates Android launcher resources from assets/icon.png.
+- Android package ID remains com.turfbook.app to match the current Firebase Android registration.
+- Guest bookings are stored through callable Cloud Functions. Slot locks are per turf/date/hour and created transactionally; legacy bookings are checked for overlap.
+- Admin is Google sign-in plus Firestore UID allow-list; owner accounts are Firebase Auth users with server custom claims and active owner documents.
+- Admin verifies UPI transaction references; backend adds a one-time ₹50 owner ledger credit per verified booking. No automatic bank transfer occurs.
+- Notifications are generated from Firestore create/update triggers and sent using Firebase Admin Messaging. Admin/owner tokens are stored per physical device, with legacy single-token records still supported. A custom Android notification channel is initialized on app launch; custom tone is `resources/android/raw/panthalchaam_alert.wav`.
+- App images are currently size-limited data URLs in Firestore, not Cloud Storage. Use Storage uploads before large-scale image use.
+- Build and live Firebase functionality remain unverified until GitHub Actions, Firebase deployment, OAuth setup, and two-device tests pass.

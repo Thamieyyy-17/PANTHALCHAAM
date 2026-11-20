@@ -1,0 +1,24 @@
+PANTHALCHAAM — FIREBASE INTEGRATION STATUS
+
+Firebase project: turfbook-966bc
+Android application ID: com.turfbook.app
+Cloud Functions region: asia-south1
+
+Implemented in source:
+- Firebase JS app initialization with the existing web config.
+- Firestore listeners for public turfs/settings and authenticated notification records.
+- Callable Cloud Functions for customer bookings, slot locks, owner accounts, payment verification, settings, and dashboard data.
+- Google admin access checked against admins/<UID> with active=true. No bootstrapAdmin callable or bootstrap secret.
+- Owner custom claims and active owner checks.
+- FCM notification triggers, per-device token records for multiple admin/owner devices (with legacy-token compatibility), and Android custom sound channel (PANTHALCHAAM).
+- Firestore security rules deny direct client mutation of booking/owner/admin records.
+
+Not deployed / not verified:
+- Firestore rules/indexes and Cloud Functions have not been deployed from this workspace.
+- Cloud Functions deploy requires Blaze; review billing with a parent/guardian.
+- google-services.json still has an empty oauth_client list. Native Google login needs SHA-1/SHA-256 configured and a refreshed config file.
+- npm install timed out here; the Vite/Gradle build must be confirmed by GitHub Actions.
+- No device smoke test has been performed with this exact ZIP. The previous launch crash is not confirmed fixed.
+- Background notification behaviour requires FCM deployment, Android channel, runtime permission, and real-device tests.
+
+Admin provisioning: sign in once with the Google account, copy UID in Firebase Authentication, create admins/<UID> with active=true in Firestore Console, then sign in again. The client cannot write its own admin access record.

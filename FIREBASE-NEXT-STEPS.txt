@@ -1,0 +1,12 @@
+PANTHALCHAAM — REQUIRED OWNER ACTIONS
+
+1. Upload the ZIP contents to the root of a new GitHub repository; keep its default branch main.
+2. Add the Android SHA-1/SHA-256 fingerprints in Firebase Project Settings. Ensure Google sign-in is enabled, download the updated google-services.json, and replace the included file.
+3. Review Firebase billing with a parent/guardian before enabling Blaze. Cloud Functions are required for cloud bookings, owners, secure payment ledger handling, and notification triggers.
+4. Deploy: firebase deploy --only firestore:rules,firestore:indexes,functions,hosting
+5. Sign in once with the intended Google admin account. Copy its UID from Firebase Authentication > Users. Create admins/<UID> in Firestore with active=true (Boolean).
+6. Add actual turf names, locations, owners, and prices in the Admin dashboard. Every turf requires 5s and 7s; only one turf may have Mini 7s with its own price.
+7. Run the Android workflow and test two separate devices: app startup, guest booking, same-slot conflict, customer lookup, owner isolation, Google admin sign-in, payment proof and exactly-once ₹50 ledger credit, Notice Board sync, and push sound/vibration.
+8. Complete a security/privacy review and make a signed release build only after tests pass.
+
+The workflow currently produces a debug APK, not a signed Play Store AAB. The included google-services.json is not yet configured for native Google OAuth. Do not accept real bookings/payments until cloud deployment and device tests are complete.

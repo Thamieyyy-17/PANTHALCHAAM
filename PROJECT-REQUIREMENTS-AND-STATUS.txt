@@ -1,0 +1,47 @@
+PANTHALCHAAM — PROJECT REQUIREMENTS, CURRENT IMPLEMENTATION, AND RELEASE CHECKLIST
+
+BRAND / ANDROID IDENTITY
+- Display name: PANTHALCHAAM.
+- Launcher icon: the approved final black-and-gold football logo. The four icon source files (root, public, assets, resources) are byte-identical. CI generates Android launcher and round/adaptive image assets from assets/icon.png.
+- The Android package/application ID intentionally remains com.turfbook.app because that is the Android app registered in the existing Firebase project. Changing it would require registering a new Android app in Firebase and replacing google-services.json.
+
+REQUIRED APP BEHAVIOUR
+- Customers can browse turfs and request bookings without creating an account. A booking can be looked up with its booking ID and random access code.
+- All business records must be cloud-backed. This code uses Firestore and callable Cloud Functions; it does not use localStorage/sessionStorage for bookings, turfs, owners, or settings. There is no local-only booking fallback.
+- Every turf must have separate 5s and 7s hourly prices. Exactly one turf may additionally offer Mini 7s with its own separate price. Server-side validation enforces these rules. Actual turf names, locations, owners, and prices must be entered by the admin; this project does not invent them.
+- Booking requests are written by Cloud Functions. Per-hour Firestore slot locks and overlap checks are performed transactionally to prevent two devices from taking the same slot at the same time.
+- Each owner has a separate login and sees only bookings/turfs assigned to that owner. Owner credentials are created and managed by the admin through trusted Cloud Functions.
+- Admin signs in with Google. Access requires admins/<Firebase UID> with active=true. There is no bootstrapAdmin function, bootstrap secret, or local PIN-only admin backdoor.
+- Payment is collected externally by the configured UPI/QR process. The customer submits a transaction reference after approval; the admin verifies it. Verification credits ₹50 to the assigned owner's in-app ledger exactly once. This is not an automatic bank transfer, payout, or payment-gateway integration.
+- Admin can manage turfs, owners, assignments, prices, QR/UPI details, branding settings, and the home-page Notice Board with optional image.
+- FCM/Firestore-triggered notifications target active admins and assigned owners across registered devices; per-device FCM tokens are stored separately, with legacy single-token records still read for compatibility. A guest customer can supply a device token for booking-status notifications after granting permission. Android foreground notifications play the included tone and vibrate when supported. Background sound is controlled by Android notification-channel and device settings.
+- The Android notification channel is created on app launch so guest booking notifications have a named channel and custom sound available.
+
+FIREBASE PROJECT CONFIGURATION
+- Firebase project ID: turfbook-966bc.
+- Android application ID: com.turfbook.app.
+- Cloud Functions region: asia-south1.
+- Public Firebase web client settings are included in .env.production for deterministic Vite builds. The included google-services.json must match com.turfbook.app.
+- The included google-services.json currently has an empty oauth_client array. Native Google sign-in is NOT ready until the actual Android SHA-1/SHA-256 fingerprints are added in Firebase Console, Google sign-in is enabled, and a refreshed google-services.json containing OAuth client configuration replaces the included file.
+- The functions used for booking locks, owner management, payment crediting, and notification triggers require Cloud Functions deployment. Firebase currently requires the Blaze billing plan for deploying Cloud Functions. A parent/guardian should review billing, budgets, and potential charges before enabling it. See https://firebase.google.com/docs/projects/billing/firebase-pricing-plans
+- Deploy Firestore rules/indexes, Functions, and Hosting from a trusted machine signed into the correct Firebase project: firebase deploy --only firestore:rules,firestore:indexes,functions,hosting
+
+IMPORTANT LIMITS / NOT YET VERIFIED
+- This archive is source code, not an APK. No Firebase deployment has been performed by this build process.
+- Dependency installation timed out in the authoring environment, so a Vite production build and Gradle APK build could not be completed or verified here. The included GitHub Actions workflow performs those steps in the new repository.
+- No device crash log or real-device smoke test is available. The previous close-on-launch issue cannot be declared fixed until this exact source is built and run on the target Android device.
+- The Android workflow creates a DEBUG APK for testing, not a signed Play Store release.
+- The native Google sign-in flow requires the fresh OAuth-populated google-services.json described above.
+- The custom sound, push registration, delivery, permission prompts, and cross-device updates require live testing after deployment on at least two devices. Android battery restrictions, notification settings, and user permissions can affect delivery.
+- The admin-uploaded turf/QR/app/notice images are currently stored as bounded data URLs in Firestore documents, not Firebase Storage. This is suitable only for small/limited images; migrate to authenticated Cloud Storage uploads before scaling the image library.
+- Customer payment verification is manual UPI reference verification. There is no payment gateway, automated reconciliation, refund transfer, or automatic owner bank payout.
+- The app must not be used to accept real customer payments until Firebase rules, functions, auth, slot collision, owner isolation, payments, and notification delivery have been deployed and tested.
+
+FIRST-RELEASE CHECKLIST
+1. Create a new GitHub repository and upload the contents of this ZIP at repository root (not the ZIP file nested inside the repository).
+2. Confirm the repository default branch is main. Run Actions → Build PANTHALCHAAM Android APK.
+3. For Google login, add Android SHA-1/SHA-256 fingerprints in Firebase and replace google-services.json with the newly downloaded OAuth-populated file before building.
+4. Review Firebase billing with a parent/guardian; deploy Firestore rules/indexes and Cloud Functions.
+5. In Firestore create admins/<intended Google UID> with active=true after that Google account first signs in. Do not add a bootstrap secret.
+6. Build and test on two devices: startup, guest booking, same-slot collision, customer lookup, owner-only data access, admin Google login, payment proof and exactly-once ₹50 ledger credit, Notice Board sync, notification sound/vibration, and offline/restart behaviour.
+7. Only after all tests pass, prepare a signed release build and appropriate privacy/security review.

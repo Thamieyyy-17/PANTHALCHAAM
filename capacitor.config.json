@@ -1,0 +1,14 @@
+{
+  "appId": "com.turfbook.app",
+  "appName": "PANTHALCHAAM",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": true,
+      "providers": [
+        "google.com"
+      ]
+    }
+  }
+}
