@@ -1,0 +1,48 @@
+PANTHALCHAAM — Firebase Email/Password Admin Login Overlay
+===========================================================
+
+WHAT THIS PATCH CHANGES
+- Replaces the Admin Google sign-in button with Firebase Email/Password sign-in.
+- Keeps the existing Firestore admin allow-list check: admins/{uid} must exist and have active: true.
+- Keeps the existing owner login, booking flow, turf management, settings, notice board, ringtone, push notification, and branding code unchanged.
+- Does not use localStorage/sessionStorage for admin authorization.
+- Does not change Firebase project ID, Android application ID, app icon, app name, ringtone assets, or Android build workflow.
+
+FILES TO UPLOAD
+Upload/replace these files in the ROOT of your existing GitHub repository:
+- src/App.jsx
+- src/firebase.js
+- App.jsx
+- firebase.js
+- ADMIN-LOGIN-SETUP.txt
+
+Do not delete any other repository files. GitHub's web upload can replace the four existing source files and add the setup note.
+
+FIREBASE ADMIN SETUP (REQUIRED ONCE)
+1. Open Firebase Console for project turfbook-966bc.
+2. Go to Authentication > Sign-in method and ensure Email/Password is enabled.
+3. Go to Authentication > Users and create an Email/Password user for the admin.
+   - Do not share the password in chat or commit it to GitHub.
+   - If the email is already registered only through Google, use a separate admin email or properly link the provider; do not create duplicate accounts by changing security settings casually.
+4. Open that user's Authentication record and copy its UID.
+5. Open Firestore Database and create a document:
+   Collection: admins
+   Document ID: paste the exact UID
+   Field: active (boolean) = true
+6. Keep the existing Firestore security rules. They already allow a signed-in user to read only their own admins/{uid} record, and deny client writes.
+
+HOW LOGIN WORKS
+- Admin enters the Email/Password account on the Admin screen.
+- Firebase Authentication verifies the credentials.
+- The app reads admins/{uid}; access is granted only if active is exactly true.
+- If the account is not allow-listed, the app signs it out and denies access.
+- The existing onAuthStateChanged flow then loads the existing callable admin dashboard.
+
+BUILD
+Run the existing GitHub Actions Android workflow after uploading these files.
+This patch does not modify icon/name/ringtone generation or the Android package ID.
+
+TEST STATUS / LIMITATION
+- The repository's scripts/verify-project.mjs check passed against this patched source.
+- A full Vite/Android build was not completed in this environment because npm dependency installation timed out.
+- Therefore this patch is not a claim that the final APK has been built or device-tested. Check the GitHub Actions result before installing.

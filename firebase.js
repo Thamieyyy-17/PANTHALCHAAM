@@ -1,7 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { Capacitor } from '@capacitor/core';
-import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
-import { getAuth, GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
@@ -66,28 +64,18 @@ export async function isRegisteredAdmin(user) {
 }
 
 // Admin authorization is an explicit Firestore allow-list entry; no bootstrap callable or secret is used.
-export async function adminSignIn() {
-  let credential;
-  if (Capacitor.isNativePlatform()) {
-    // Native Google picker, then exchange its Google ID token into the JS Firebase Auth session.
-    const nativeResult = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
-    const idToken = nativeResult.credential?.idToken;
-    if (!idToken) throw new Error('Google sign-in did not return an ID token. Check the Android SHA-1 and OAuth setup.');
-    credential = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
-  } else {
-    credential = await signInWithPopup(auth, new GoogleAuthProvider());
-  }
+export async function adminSignIn(email, password) {
+  if (!auth || !db) throw new Error('Firebase is not configured.');
+  if (!email || !password) throw new Error('Enter your admin email and password.');
+  const credential = await signInWithEmailAndPassword(auth, email, password);
   if (!(await isRegisteredAdmin(credential.user))) {
-    await signOutTurfBook();
-    throw new Error('This Google account is not registered as a PANTHALCHAAM admin. Add its UID to Firestore admins first.');
+    await signOut(auth);
+    throw new Error('This account is not enabled as a PANTHALCHAAM admin. Ask the project administrator to activate its UID in Firestore admins.');
   }
   return credential.user;
 }
 
 export async function signOutTurfBook() {
-  if (Capacitor.isNativePlatform()) {
-    await FirebaseAuthentication.signOut().catch(() => {});
-  }
   if (auth) await signOut(auth);
 }
 
