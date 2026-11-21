@@ -1,7 +1,8 @@
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
-import { getAuth, GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
@@ -15,57 +16,99 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const firebaseConfigured = ['apiKey', 'authDomain', 'projectId', 'appId'].every(key => Boolean(firebaseConfig[key]));
-export const app = firebaseConfigured ? (getApps().length ? getApp() : initializeApp(firebaseConfig)) : null;
-// Let the Firebase SDK choose a supported persistence mechanism for the WebView/browser.
-// PANTHALCHAAM business records are stored in Firestore.
+export const firebaseConfigured = ['apiKey', 'authDomain', 'projectId', 'appId'].every(
+  key => Boolean(firebaseConfig[key])
+);
+
+export const app = firebaseConfigured
+  ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+  : null;
+
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const functions = app ? getFunctions(app, 'asia-south1') : null;
+
 let messagingInstance = null;
+
 async function messaging() {
-  if (!app || typeof window === 'undefined' || !('serviceWorker' in navigator) || !(await isSupported())) return null;
+  if (
+    !app ||
+    typeof window === 'undefined' ||
+    !('serviceWorker' in navigator) ||
+    !(await isSupported())
+  ) {
+    return null;
+  }
+
   if (!messagingInstance) messagingInstance = getMessaging(app);
   return messagingInstance;
 }
+
 export async function registerWebPush({ requestPermission = true } = {}) {
   const service = await messaging();
+
   if (!service || !('Notification' in window)) return null;
-  if (Notification.permission === 'default' && requestPermission) await Notification.requestPermission();
+
+  if (Notification.permission === 'default' && requestPermission) {
+    await Notification.requestPermission();
+  }
+
   if (Notification.permission !== 'granted') return null;
+
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-  if (!vapidKey) throw new Error('Firebase VAPID public key is missing from the build configuration.');
+
+  if (!vapidKey) {
+    throw new Error('Firebase VAPID public key is missing from the build configuration.');
+  }
+
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-  return getToken(service, { vapidKey, serviceWorkerRegistration: registration });
+
+  return getToken(service, {
+    vapidKey,
+    serviceWorkerRegistration: registration
+  });
 }
+
 export async function listenForWebMessages(callback) {
   const service = await messaging();
   return service ? onMessage(service, callback) : () => {};
 }
+
 export const call = (name, data) => {
-  if (!functions) return Promise.reject(new Error('Firebase is not configured.'));
+  if (!functions) {
+    return Promise.reject(new Error('Firebase is not configured.'));
+  }
+
   return httpsCallable(functions, name)(data).then(result => result.data);
 };
 
-const ownerEmail = code => call('ownerLogin', { code }).then(result => result.email);
+const ownerEmail = code =>
+  call('ownerLogin', { code }).then(result => result.email);
+
 export async function ownerSignIn(code, password) {
+  if (!auth) throw new Error('Firebase is not configured.');
+
   const email = await ownerEmail(code);
   const credential = await signInWithEmailAndPassword(auth, email, password);
   const token = await credential.user.getIdTokenResult(true);
+
   if (!token.claims.ownerId) {
     await signOut(auth);
     throw new Error('This account is not enabled as a PANTHALCHAAM owner.');
   }
+
   return credential.user;
 }
 
 export async function isRegisteredAdmin(user) {
   if (!user || !db) return false;
+
   const adminSnapshot = await getDoc(doc(db, 'admins', user.uid));
+
   return adminSnapshot.exists() && adminSnapshot.data()?.active === true;
 }
 
-// Admin authorization is an explicit Firestore allow-list entry; no bootstrap callable or secret is used.
+// Admin authorization uses the Firestore admins UID allow-list.
 export async function adminSignIn(email, password) {
   if (!auth || !db) {
     throw new Error('Firebase is not configured.');
@@ -83,20 +126,12 @@ export async function adminSignIn(email, password) {
 
   if (!(await isRegisteredAdmin(credential.user))) {
     await signOutTurfBook();
+
     throw new Error(
       'This account is not enabled as a PANTHALCHAAM admin. Check its UID in Firestore admins.'
     );
-  
+  }
 
-  return credential.user;
-}
-  } else {
-    credential = await signInWithPopup(auth, new GoogleAuthProvider());
-  }
-  if (!(await isRegisteredAdmin(credential.user))) {
-    await signOutTurfBook();
-    throw new Error('This Google account is not registered as a PANTHALCHAAM admin. Add its UID to Firestore admins first.');
-  }
   return credential.user;
 }
 
@@ -104,9 +139,27 @@ export async function signOutTurfBook() {
   if (Capacitor.isNativePlatform()) {
     await FirebaseAuthentication.signOut().catch(() => {});
   }
+
   if (auth) await signOut(auth);
 }
 
-export const watchTurfs = (callback, onError) => onSnapshot(collection(db, 'turfs'), snapshot => callback(snapshot.docs.map(document => ({ id: document.id, ...document.data() }))), onError);
-export const watchSettings = (callback, onError) => onSnapshot(doc(db, 'settings', 'public'), snapshot => callback(snapshot.exists() ? snapshot.data() : {}), onError);
+export const watchTurfs = (callback, onError) =>
+  onSnapshot(
+    collection(db, 'turfs'),
+    snapshot => callback(
+      snapshot.docs.map(document => ({
+        id: document.id,
+        ...document.data()
+      }))
+    ),
+    onError
+  );
+
+export const watchSettings = (callback, onError) =>
+  onSnapshot(
+    doc(db, 'settings', 'public'),
+    snapshot => callback(snapshot.exists() ? snapshot.data() : {}),
+    onError
+  );
+
 export { signOut };
