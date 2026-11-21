@@ -66,14 +66,30 @@ export async function isRegisteredAdmin(user) {
 }
 
 // Admin authorization is an explicit Firestore allow-list entry; no bootstrap callable or secret is used.
-export async function adminSignIn() {
-  let credential;
-  if (Capacitor.isNativePlatform()) {
-    // Native Google picker, then exchange its Google ID token into the JS Firebase Auth session.
-    const nativeResult = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
-    const idToken = nativeResult.credential?.idToken;
-    if (!idToken) throw new Error('Google sign-in did not return an ID token. Check the Android SHA-1 and OAuth setup.');
-    credential = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+export async function adminSignIn(email, password) {
+  if (!auth || !db) {
+    throw new Error('Firebase is not configured.');
+  }
+
+  if (!email || !password) {
+    throw new Error('Enter your admin email and password.');
+  }
+
+  const credential = await signInWithEmailAndPassword(
+    auth,
+    email.trim(),
+    password
+  );
+
+  if (!(await isRegisteredAdmin(credential.user))) {
+    await signOutTurfBook();
+    throw new Error(
+      'This account is not enabled as a PANTHALCHAAM admin. Check its UID in Firestore admins.'
+    );
+  
+
+  return credential.user;
+}
   } else {
     credential = await signInWithPopup(auth, new GoogleAuthProvider());
   }
