@@ -15,7 +15,7 @@ function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full);
-    else if (/^ic_launcher.*\.png$/i.test(entry.name) && full.includes(`${path.sep}mipmap-`)) pngs.push(full);
+    else if (/^ic_launcher(?:_round|_foreground)?\.png$/i.test(entry.name) && full.includes(`${path.sep}mipmap-`)) pngs.push(full);
   }
 }
 walk(res);
